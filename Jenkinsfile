@@ -38,14 +38,14 @@ pipeline {
             emailext(
                 subject: "Build SUCCESS: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
                 body: "The build ${env.BUILD_NUMBER} of ${env.JOB_NAME} succeeded.\n\nView it at: ${env.BUILD_URL}",
-                to: 'you@example.com'
+                to: 's226433107@deakin.edu.au'
             )
         }
         failure {
             emailext(
                 subject: "Build FAILED: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
                 body: "The build ${env.BUILD_NUMBER} of ${env.JOB_NAME} failed.\n\nView the log at: ${env.BUILD_URL}console",
-                to: 'you@example.com'
+                to: 's226433107@deakin.edu.au'
             )
         }
     }
