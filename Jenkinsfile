@@ -5,6 +5,10 @@ pipeline {
         nodejs 'nodejs-lts'
     }
 
+    environment {
+        NOTIFY_TO = 's226433107@deakin.edu.au'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -18,7 +22,21 @@ pipeline {
         }
         stage('Run Tests') {
             steps {
-                bat 'npm test || exit /b 0'   // Allows pipeline to continue despite test failures
+                script {
+                    // Capture the test output so we can email it as an attachment
+                    def result = bat(
+                        script: 'npm test > test-output.log 2>&1 & exit /b 0',
+                        returnStatus: true
+                    )
+                    // Send an email after the test stage, attaching the log
+                    emailext(
+                        subject: "Test Stage ${result == 0 ? 'SUCCESS' : 'FAILURE'}: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                        body: "The Test stage completed with status: ${result == 0 ? 'SUCCESS' : 'FAILURE'}\n\n" +
+                              "Stage output is attached. View the build at: ${env.BUILD_URL}console",
+                        to: "${NOTIFY_TO}",
+                        attachments: 'test-output.log'
+                    )
+                }
             }
         }
         stage('Generate Coverage Report') {
@@ -28,7 +46,21 @@ pipeline {
         }
         stage('NPM Audit (Security Scan)') {
             steps {
-                bat 'npm audit || exit /b 0'   // Shows known CVEs in the output
+                script {
+                    // Capture the security scan output so we can email it as an attachment
+                    def auditResult = bat(
+                        script: 'npm audit > audit-output.log 2>&1 & exit /b 0',
+                        returnStatus: true
+                    )
+                    // Send an email after the security scan stage, attaching the log
+                    emailext(
+                        subject: "Security Scan Stage ${auditResult == 0 ? 'SUCCESS' : 'FAILURE'}: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                        body: "The Security Scan (npm audit) stage completed with status: ${auditResult == 0 ? 'SUCCESS' : 'FAILURE'}\n\n" +
+                              "The audit report is attached. View the build at: ${env.BUILD_URL}console",
+                        to: "${NOTIFY_TO}",
+                        attachments: 'audit-output.log'
+                    )
+                }
             }
         }
     }
@@ -38,14 +70,16 @@ pipeline {
             emailext(
                 subject: "Build SUCCESS: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
                 body: "The build ${env.BUILD_NUMBER} of ${env.JOB_NAME} succeeded.\n\nView it at: ${env.BUILD_URL}",
-                to: 's226433107@deakin.edu.au'
+                to: "${NOTIFY_TO}",
+                attachLog: true
             )
         }
         failure {
             emailext(
                 subject: "Build FAILED: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
                 body: "The build ${env.BUILD_NUMBER} of ${env.JOB_NAME} failed.\n\nView the log at: ${env.BUILD_URL}console",
-                to: 's226433107@deakin.edu.au'
+                to: "${NOTIFY_TO}",
+                attachLog: true
             )
         }
     }
